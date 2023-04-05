@@ -4,8 +4,13 @@
 
 int main() {
 
-    unsigned char* base64 = base64_decode("aGVsbG8gd29ybGQ=");
-    printf("%s\n", base64);
+    unsigned char* code = base64_encode("hello world!");
+    unsigned char* text = base64_decode(code);
+    printf("%s\n", code);
+    printf("%s\n", text);
+
+    free(code);
+    free(text);
     system("pause");
 
     return 0;
