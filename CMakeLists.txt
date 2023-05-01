@@ -18,7 +18,7 @@ set_target_properties( crypto
         PROPERTIES IMPORTED_LOCATION
         ${PROJECT_SOURCE_DIR}/lib/libcrypto.lib )
 
-add_executable( eaes main.c security.c base64.c )
+add_executable( eaes main.cpp security.cpp base64.cpp )
 
 target_link_libraries(
                        eaes
