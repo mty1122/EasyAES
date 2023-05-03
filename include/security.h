@@ -10,6 +10,11 @@ const struct keystore {
     const unsigned char iv[16] = {'1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '1', '2', '3', '4', '5', '6'};
 } KETSTORE;
 
+typedef struct {
+    std::unique_ptr<char[]> ciphertext;
+    std::unique_ptr<char[]> tag;
+} GCM_RESULT;
+
 class Security {
 private:
     unsigned char key[16];
@@ -17,6 +22,8 @@ public:
     Security(const unsigned char key[16]);
     std::unique_ptr<unsigned char[]> aes_ecb_128_decrypt(const char* ciphertext_base64, bool tostring = true);
     std::unique_ptr<char[]> aes_ecb_128_encrypt(const unsigned char* plaintext, int plaintext_len); 
+    std::unique_ptr<GCM_RESULT> aes_gcm_128_encrypt(const unsigned char* plaintext, 
+        int plaintext_len, const unsigned char* iv, int iv_len);
 };
 
 #endif
