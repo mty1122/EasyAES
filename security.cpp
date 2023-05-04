@@ -1,10 +1,103 @@
 #include "include/security.h"
 
-Security::Security(const unsigned char key[16]) {
-    memcpy(Security::key, key, 16);
+using namespace eaes;
+
+AES_GCM::AES_GCM(const unsigned char* key, int key_len) {
+    this->key = new unsigned char[key_len];
+    memcpy(this->key, key, key_len);
+    switch (key_len) {
+    case 16:
+        mode = AES_128;
+        break;
+    
+    case 24:
+        mode = AES_192;
+        break;
+
+    case 32:
+        mode = AES_256;
+        break;    
+
+    default:
+        throw "key length error";    
+    }
 }
 
-std::unique_ptr<unsigned char[]> Security::aes_ecb_128_decrypt(const char* ciphertext_base64, bool tostring) {
+AES_GCM::~AES_GCM() {
+    delete this->key;
+}
+
+const EVP_CIPHER* AES_GCM::get_cipher() {
+    switch (mode) {
+    case MODE::AES_128:
+        return EVP_aes_128_gcm();
+    
+    case MODE::AES_192:
+        return EVP_aes_192_gcm();
+
+    default:
+        return EVP_aes_256_gcm();   
+    }
+}
+
+std::unique_ptr<GCM_ENCRYPT_RESULT> AES_GCM::encrypt(const unsigned char* plaintext,
+    int plaintext_len, const unsigned char* iv, int iv_len) {
+    auto ctx = EVP_CIPHER_CTX_new();
+    EVP_EncryptInit_ex(ctx, get_cipher(), nullptr, nullptr, nullptr);
+    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, iv_len, nullptr); 
+    EVP_EncryptInit_ex(ctx, nullptr, nullptr, key, iv);
+    EVP_CIPHER_CTX_set_padding(ctx, EVP_PADDING_PKCS7);
+    unsigned char outbuff[plaintext_len + AES_BLOCK_SIZE];
+    int ciphertext_len, outlen;
+    EVP_EncryptUpdate(ctx, outbuff, &outlen, plaintext, plaintext_len);
+    ciphertext_len = outlen;
+    EVP_EncryptFinal_ex(ctx, &outbuff[ciphertext_len], &outlen);
+    ciphertext_len += outlen;
+    auto ciphertext = base64_encode(outbuff, ciphertext_len);
+    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, 16, outbuff);
+    auto tag = base64_encode(outbuff, 16);
+    EVP_CIPHER_CTX_free(ctx);
+    auto result = std::make_unique<GCM_ENCRYPT_RESULT>();
+    result->ciphertext = std::move(ciphertext);
+    result->tag = std::move(tag);
+    return result;
+}
+
+std::unique_ptr<GCM_DECRYPT_RESULT> AES_GCM::decrypt(const char* ciphertext_base64, 
+    const unsigned char* iv, int iv_len, const char* tag_base64, bool tostring) {
+    int ciphertext_len;
+    auto ciphertext = base64_decode(ciphertext_base64, ciphertext_len);
+    unsigned char outbuff[ciphertext_len];    
+    auto ctx = EVP_CIPHER_CTX_new();
+    EVP_DecryptInit_ex(ctx, get_cipher(), nullptr, nullptr, nullptr);
+    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, iv_len, nullptr);
+    EVP_DecryptInit_ex(ctx, nullptr, nullptr, key, iv);
+    EVP_CIPHER_CTX_set_padding(ctx, EVP_PADDING_PKCS7);
+    int plaintext_len, outlen, tag_len;
+    EVP_DecryptUpdate(ctx, outbuff, &outlen, ciphertext.get(), ciphertext_len);
+    plaintext_len = outlen;
+    auto tag = base64_decode(tag_base64, tag_len);
+    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, tag_len, tag.get());
+    int decrypt_result = EVP_DecryptFinal_ex(ctx, &outbuff[plaintext_len], &outlen);
+    plaintext_len += outlen;
+    EVP_CIPHER_CTX_free(ctx);
+    auto result = std::make_unique<GCM_DECRYPT_RESULT>();
+    result->result = decrypt_result > 0;
+    if (tostring) {
+        std::unique_ptr<unsigned char[]> plaintext(new unsigned char[plaintext_len + 1]);
+        memcpy(plaintext.get(), outbuff, plaintext_len);
+        plaintext[plaintext_len] = '\0';
+        result->plaintext = std::move(plaintext);
+    } else {
+        std::unique_ptr<unsigned char[]> plaintext(new unsigned char[plaintext_len]);
+        memcpy(plaintext.get(), outbuff, plaintext_len);
+        result->plaintext = std::move(plaintext);
+    }
+    return result;
+}
+
+std::unique_ptr<unsigned char[]> eaes::aes_128_ecb_decrypt(const unsigned char key[16], 
+    const char* ciphertext_base64, bool tostring) {
     int ciphertext_len;
     auto ciphertext = base64_decode(ciphertext_base64, ciphertext_len);
     unsigned char outbuff[ciphertext_len];
@@ -30,7 +123,8 @@ std::unique_ptr<unsigned char[]> Security::aes_ecb_128_decrypt(const char* ciphe
     }
 }
 
-std::unique_ptr<char[]> Security::aes_ecb_128_encrypt(const unsigned char* plaintext, int plaintext_len) {
+std::unique_ptr<char[]> eaes::aes_128_ecb_encrypt(const unsigned char key[16], 
+    const unsigned char* plaintext, int plaintext_len) {
     AES_KEY aes_key;
     AES_set_encrypt_key(key, 128, &aes_key);
     //Padding
@@ -49,60 +143,4 @@ std::unique_ptr<char[]> Security::aes_ecb_128_encrypt(const unsigned char* plain
         AES_ecb_encrypt(&inbuff[position], &outbuff[position], &aes_key, AES_ENCRYPT);
     }
     return base64_encode(outbuff, ciphertext_len);
-}
-
-std::unique_ptr<GCM_ENCRYPT_RESULT> Security::aes_gcm_128_encrypt(const unsigned char* plaintext,
-    int plaintext_len, const unsigned char* iv, int iv_len) {
-    auto ctx = EVP_CIPHER_CTX_new();
-    EVP_EncryptInit_ex(ctx, EVP_aes_128_gcm(), nullptr, nullptr, nullptr);
-    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, iv_len, nullptr); 
-    EVP_EncryptInit_ex(ctx, nullptr, nullptr, key, iv);
-    EVP_CIPHER_CTX_set_padding(ctx, EVP_PADDING_PKCS7);
-    unsigned char outbuff[plaintext_len + AES_BLOCK_SIZE];
-    int ciphertext_len, outlen;
-    EVP_EncryptUpdate(ctx, outbuff, &outlen, plaintext, plaintext_len);
-    ciphertext_len = outlen;
-    EVP_EncryptFinal_ex(ctx, &outbuff[ciphertext_len], &outlen);
-    ciphertext_len += outlen;
-    auto ciphertext = base64_encode(outbuff, ciphertext_len);
-    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, 16, outbuff);
-    auto tag = base64_encode(outbuff, 16);
-    EVP_CIPHER_CTX_free(ctx);
-    auto result = std::make_unique<GCM_ENCRYPT_RESULT>();
-    result->ciphertext = std::move(ciphertext);
-    result->tag = std::move(tag);
-    return result;
-}
-
-std::unique_ptr<GCM_DECRYPT_RESULT> Security::aes_gcm_128_decrypt(const char* ciphertext_base64, 
-    const unsigned char* iv, int iv_len, const char* tag_base64, bool tostring) {
-    int ciphertext_len;
-    auto ciphertext = base64_decode(ciphertext_base64, ciphertext_len);
-    unsigned char outbuff[ciphertext_len];    
-    auto ctx = EVP_CIPHER_CTX_new();
-    EVP_DecryptInit_ex(ctx, EVP_aes_128_gcm(), nullptr, nullptr, nullptr);
-    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, iv_len, nullptr);
-    EVP_DecryptInit_ex(ctx, nullptr, nullptr, key, iv);
-    EVP_CIPHER_CTX_set_padding(ctx, EVP_PADDING_PKCS7);
-    int plaintext_len, outlen, tag_len;
-    EVP_DecryptUpdate(ctx, outbuff, &outlen, ciphertext.get(), ciphertext_len);
-    plaintext_len = outlen;
-    auto tag = base64_decode(tag_base64, tag_len);
-    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, tag_len, tag.get());
-    int decrypt_result = EVP_DecryptFinal_ex(ctx, &outbuff[plaintext_len], &outlen);
-    plaintext_len += outlen;
-    EVP_CIPHER_CTX_free(ctx);
-    auto result = std::make_unique<GCM_DECRYPT_RESULT>();
-    result->result = decrypt_result > 0;
-    if (tostring) {
-        std::unique_ptr<unsigned char[]> plaintext(new unsigned char[plaintext_len + 1]);
-        memcpy(plaintext.get(), outbuff, plaintext_len);
-        plaintext[plaintext_len] = '\0';
-        result->plaintext = std::move(plaintext);
-    } else {
-        std::unique_ptr<unsigned char[]> plaintext(new unsigned char[plaintext_len]);
-        memcpy(plaintext.get(), outbuff, plaintext_len);
-        result->plaintext = std::move(plaintext);
-    }
-    return result;
 }
