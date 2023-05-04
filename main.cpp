@@ -17,6 +17,8 @@ int main() {
 
     auto encrypt_result = security.aes_gcm_128_encrypt((const unsigned char*)"123456", 6, KETSTORE.iv, sizeof(KETSTORE.iv)); 
     cout << "gcm test:" << endl << encrypt_result->ciphertext.get() << endl << encrypt_result->tag.get() << endl;
+    auto decrypt_result = security.aes_gcm_128_decrypt("t5bWiLJb", KETSTORE.iv, sizeof(KETSTORE.iv), "JeX+N0D3j+1Dogw6c9O/eQ==");
+    cout << (decrypt_result->result ? "SUCCESS" : "FAIL") << endl << decrypt_result->plaintext.get() << endl;
     
     system("pause");
     return 0;
