@@ -12,17 +12,16 @@ int main() {
     cout << "base64 test:" << endl << code.get() << endl << text.get() << endl;
 
     //AES_128_ECB test
-    auto plaintext = eaes::aes_128_ecb_decrypt(eaes::KETSTORE.key_16, "yXVUkR45PFz0UfpbDB8/ew==");
-    auto ciphertext = eaes::aes_128_ecb_encrypt(eaes::KETSTORE.key_16, (const unsigned char*)"123456", 6);
-    cout << "aes test:" << endl << plaintext.get() << endl << ciphertext.get() << endl;   
+    eaes::AES security(eaes::KETSTORE.key_16, eaes::AES_128);
+    auto plaintext = security.ecb_decrypt("yXVUkR45PFz0UfpbDB8/ew==");
+    auto ciphertext = security.ecb_encrypt((const unsigned char*)"123456", 6);
+    cout << "ecb test:" << endl << plaintext.get() << endl << ciphertext.get() << endl;   
 
     //AES_128_GCM test
-    eaes::AES_GCM security(eaes::KETSTORE.key_16, sizeof(eaes::KETSTORE.key_16));
-    auto encrypt_result = security.encrypt((const unsigned char*)"123456",6 , 
-        eaes::KETSTORE.iv, sizeof(eaes::KETSTORE.iv)); 
+    auto iv = eaes::rand_iv(16);
+    auto encrypt_result = security.gcm_encrypt((const unsigned char*)"123456",6 , iv.get(), 16); 
     cout << "gcm test:" << endl << encrypt_result->ciphertext.get() << endl << encrypt_result->tag.get() << endl;
-    auto decrypt_result = security.decrypt("t5bWiLJb", eaes::KETSTORE.iv, 
-        sizeof(eaes::KETSTORE.iv), "JeX+N0D3j+1Dogw6c9O/eQ==");
+    auto decrypt_result = security.gcm_decrypt(encrypt_result->ciphertext.get(), iv.get(), 16, encrypt_result->tag.get());
     cout << (decrypt_result->result ? "SUCCESS" : "FAIL") << endl << decrypt_result->plaintext.get() << endl;
     
     system("pause");

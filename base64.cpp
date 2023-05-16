@@ -2,13 +2,13 @@
 
 std::unique_ptr<unsigned char[]> base64_decode(const char* in, int& outlen) {
     if (in == nullptr)
-        return nullptr;
+        return {};
 
-    int inlen = strlen(in);
+    int inlen = (int)strlen(in);
 
-    if(strstr(in, "=="))
+    if(strstr(in, "==") != nullptr)
         outlen = inlen / 4 * 3 - 2;
-    else if(strstr(in, "="))
+    else if(strstr(in, "=") != nullptr)
         outlen = inlen / 4 * 3 -  1;
     else
         outlen = inlen / 4 * 3;
@@ -21,14 +21,14 @@ std::unique_ptr<unsigned char[]> base64_decode(const char* in, int& outlen) {
 
 std::unique_ptr<char[]> base64_decode_to_string(const char* in) {
     if (in == nullptr)
-        return nullptr;
+        return {};
 
     int inlen, outlen;
-    inlen = strlen(in);
+    inlen = (int)strlen(in);
 
-    if(strstr(in, "=="))
+    if(strstr(in, "==") != nullptr)
         outlen = inlen / 4 * 3 - 2;
-    else if(strstr(in, "="))
+    else if(strstr(in, "=") != nullptr)
         outlen = inlen / 4 * 3 -  1;
     else
         outlen = inlen / 4 * 3;
@@ -42,7 +42,7 @@ std::unique_ptr<char[]> base64_decode_to_string(const char* in) {
 
 std::unique_ptr<char[]> base64_encode(const unsigned char* in, int inlen) {
     if (in == nullptr)
-        return nullptr;
+        return {};
 
     int outlen;
 
