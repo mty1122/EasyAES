@@ -1,6 +1,6 @@
 #include "include/base64.h"
 
-std::unique_ptr<unsigned char[]> base64_decode(const char* in, int& outlen) {
+std::unique_ptr<unsigned char[]> eaes::base64_decode(const char* in, int& outlen) {
     if (in == nullptr)
         return {};
 
@@ -9,7 +9,7 @@ std::unique_ptr<unsigned char[]> base64_decode(const char* in, int& outlen) {
     if(strstr(in, "==") != nullptr)
         outlen = inlen / 4 * 3 - 2;
     else if(strstr(in, "=") != nullptr)
-        outlen = inlen / 4 * 3 -  1;
+        outlen = inlen / 4 * 3 - 1;
     else
         outlen = inlen / 4 * 3;
 
@@ -19,28 +19,23 @@ std::unique_ptr<unsigned char[]> base64_decode(const char* in, int& outlen) {
     return out;
 }
 
-std::unique_ptr<char[]> base64_decode_to_string(const char* in) {
-    if (in == nullptr)
-        return {};
+std::string eaes::base64_decode_to_string(std::string in) {
+    size_t outlen;
 
-    int inlen, outlen;
-    inlen = (int)strlen(in);
-
-    if(strstr(in, "==") != nullptr)
-        outlen = inlen / 4 * 3 - 2;
-    else if(strstr(in, "=") != nullptr)
-        outlen = inlen / 4 * 3 -  1;
+    if(in.find("==") != std::string::npos)
+        outlen = in.length() / 4 * 3 - 2;
+    else if(in.find("=") != std::string::npos)
+        outlen = in.length() / 4 * 3 - 1;
     else
-        outlen = inlen / 4 * 3;
+        outlen = in.length() / 4 * 3;
 
-    std::unique_ptr<char[]> out(new char[outlen + 1]);
-    out[outlen] = '\0';
+    unsigned char outbuff[outlen];
 
-    EVP_DecodeBlock((unsigned char*)out.get(), (const unsigned char*)in, inlen);
-    return out;
+    EVP_DecodeBlock(outbuff, (const unsigned char*)in.c_str(), in.length());
+    return std::string((const char*)outbuff, outlen);
 }
 
-std::unique_ptr<char[]> base64_encode(const unsigned char* in, int inlen) {
+std::unique_ptr<char[]> eaes::base64_encode(const unsigned char* in, int inlen) {
     if (in == nullptr)
         return {};
 

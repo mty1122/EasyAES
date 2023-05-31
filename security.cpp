@@ -1,19 +1,17 @@
 #include "include/security.h"
 
-using namespace eaes;
-
-AES::AES(const unsigned char* key, MODE mode) {
+eaes::AES::AES(const unsigned char* key, eaes::MODE mode) {
     int key_len = mode / 8;
     this->mode = mode;
     this->key = new unsigned char[key_len];
     memcpy(this->key, key, key_len);
 }
 
-AES::~AES() {
+eaes::AES::~AES() {
     delete this->key;
 }
 
-const EVP_CIPHER* AES::get_cipher() {
+const EVP_CIPHER* eaes::AES::get_cipher() {
     switch (mode) {
     case MODE::AES_128:
         return EVP_aes_128_gcm();
@@ -26,7 +24,7 @@ const EVP_CIPHER* AES::get_cipher() {
     }
 }
 
-std::unique_ptr<GCM_ENCRYPT_RESULT> AES::gcm_encrypt(const unsigned char* plaintext,
+std::unique_ptr<eaes::GCM_ENCRYPT_RESULT> eaes::AES::gcm_encrypt(const unsigned char* plaintext,
     int plaintext_len, const unsigned char* iv, int iv_len) {
     auto ctx = EVP_CIPHER_CTX_new();
     EVP_EncryptInit_ex(ctx, get_cipher(), nullptr, nullptr, nullptr);
@@ -49,7 +47,7 @@ std::unique_ptr<GCM_ENCRYPT_RESULT> AES::gcm_encrypt(const unsigned char* plaint
     return result;
 }
 
-std::unique_ptr<GCM_DECRYPT_RESULT> AES::gcm_decrypt(const char* ciphertext_base64, 
+std::unique_ptr<eaes::GCM_DECRYPT_RESULT> eaes::AES::gcm_decrypt(const char* ciphertext_base64, 
     const unsigned char* iv, int iv_len, const char* tag_base64, bool tostring) {
     int ciphertext_len;
     auto ciphertext = base64_decode(ciphertext_base64, ciphertext_len);
@@ -82,7 +80,7 @@ std::unique_ptr<GCM_DECRYPT_RESULT> AES::gcm_decrypt(const char* ciphertext_base
     return result;
 }
 
-std::unique_ptr<unsigned char[]> AES::ecb_decrypt(const char* ciphertext_base64, bool tostring) {
+std::unique_ptr<unsigned char[]> eaes::AES::ecb_decrypt(const char* ciphertext_base64, bool tostring) {
     int ciphertext_len;
     auto ciphertext = base64_decode(ciphertext_base64, ciphertext_len);
     unsigned char outbuff[ciphertext_len];
@@ -108,7 +106,7 @@ std::unique_ptr<unsigned char[]> AES::ecb_decrypt(const char* ciphertext_base64,
     }
 }
 
-std::unique_ptr<char[]> AES::ecb_encrypt(const unsigned char* plaintext, int plaintext_len) {
+std::unique_ptr<char[]> eaes::AES::ecb_encrypt(const unsigned char* plaintext, int plaintext_len) {
     AES_KEY aes_key;
     AES_set_encrypt_key(key, mode, &aes_key);
     //Padding
@@ -132,7 +130,7 @@ std::unique_ptr<char[]> AES::ecb_encrypt(const unsigned char* plaintext, int pla
 std::unique_ptr<unsigned char[]> eaes::rand_iv(size_t len) {
     static thread_local std::uniform_int_distribution<unsigned> rand(1, 254);
     //static thread_local std::mt19937 engine(std::random_device{}()); //random_device in mingw has some problems
-    static thread_local std::mt19937 engine(std::chrono::system_clock::now().time_since_epoch().count());
+    std::mt19937 engine(std::chrono::system_clock::now().time_since_epoch().count()); //using system time
     std::unique_ptr<unsigned char[]> iv(new unsigned char[len]);
     for (size_t i = 0; i < len; ++i) {
         iv[i] = rand(engine);
