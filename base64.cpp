@@ -13,9 +13,13 @@ std::unique_ptr<unsigned char[]> eaes::base64_decode(const char* in, int& outlen
     else
         outlen = inlen / 4 * 3;
 
-    std::unique_ptr<unsigned char[]> out(new unsigned char[outlen]);
+    //The reason for using buffer is that decode block may cause unique_ptr to become void
+    unsigned char outbuff[outlen];
     
-    EVP_DecodeBlock(out.get(), (const unsigned char*)in, inlen);
+    EVP_DecodeBlock(outbuff, (const unsigned char*)in, inlen);
+
+    std::unique_ptr<unsigned char[]> out(new unsigned char[outlen]);
+    memcpy(out.get(), outbuff, outlen);
     return out;
 }
 

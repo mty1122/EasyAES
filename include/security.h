@@ -12,9 +12,9 @@ namespace eaes{
         const unsigned char key_16[16] = {'1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '1', '2', '3', '4', '5', '6'};
     } KETSTORE;
 
-    typedef enum {
+    enum MODE {
         AES_128 = 128, AES_192 = 192, AES_256 = 256
-    } MODE;
+    };
 
     typedef struct {
         std::unique_ptr<char[]> ciphertext;
