@@ -16,15 +16,15 @@ namespace eaes{
         AES_128 = 128, AES_192 = 192, AES_256 = 256
     };
 
-    typedef struct {
+    struct GCM_ENCRYPT_RESULT {
         std::unique_ptr<char[]> ciphertext;
         std::unique_ptr<char[]> tag;
-    } GCM_ENCRYPT_RESULT;
+    };
 
-    typedef struct {
+    struct GCM_DECRYPT_RESULT {
         std::unique_ptr<unsigned char[]> plaintext;
         bool result;
-    } GCM_DECRYPT_RESULT;
+    };
 
     class AES {
     private:
