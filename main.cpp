@@ -23,6 +23,10 @@ int main() {
     cout << "gcm test:" << endl << encrypt_result->ciphertext.get() << endl << encrypt_result->tag.get() << endl;
     auto decrypt_result = security.gcm_decrypt(encrypt_result->ciphertext.get(), iv.get(), 16, encrypt_result->tag.get());
     cout << (decrypt_result->result ? "SUCCESS" : "FAIL") << endl << decrypt_result->plaintext.get() << endl;
+
+    //RSA encrypt test
+    auto rsa_encrypt_result = eaes::rsa_encrypt(eaes::KETSTORE.rsa_key_2048, (const unsigned char*)"123456", 6);
+    cout << rsa_encrypt_result.get() << endl;
     
     system("pause");
     return 0;

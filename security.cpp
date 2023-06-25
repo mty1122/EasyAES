@@ -137,3 +137,27 @@ std::unique_ptr<unsigned char[]> eaes::rand_iv(size_t len) {
     }
     return iv;
 }
+
+std::unique_ptr<char[]> eaes::rsa_encrypt(const char* key, const unsigned char* plaintext, int plaintext_len) {
+    BIO *keybio = BIO_new_mem_buf(key, -1);
+    RSA* rsa = RSA_new();
+    rsa = PEM_read_bio_RSA_PUBKEY(keybio, &rsa, nullptr, nullptr);
+    if (rsa == nullptr) {
+        BIO_free_all(keybio);
+        return {};
+    }
+ 
+    // RSA_size() return vlaue is RSA_BLOCK_SIZE
+    unsigned char outbuff[RSA_size(rsa)];
+ 
+    int ciphertext_len = RSA_public_encrypt(plaintext_len, plaintext, outbuff, rsa, RSA_PKCS1_PADDING);
+  
+    BIO_free_all(keybio);
+    RSA_free(rsa);
+
+    if (ciphertext_len > 0) {
+        return base64_encode(outbuff, ciphertext_len);
+    }
+ 
+    return {};
+}
