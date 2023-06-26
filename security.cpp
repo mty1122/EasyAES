@@ -147,17 +147,23 @@ std::unique_ptr<char[]> eaes::rsa_encrypt(const char* key, const unsigned char* 
         return {};
     }
  
-    // RSA_size() return vlaue is RSA_BLOCK_SIZE
-    unsigned char outbuff[RSA_size(rsa)];
- 
-    int ciphertext_len = RSA_public_encrypt(plaintext_len, plaintext, outbuff, rsa, RSA_PKCS1_PADDING);
+    // RSA_BLOCK_SIZE == Key size(byte) (include padding)
+    const int key_size = RSA_size(rsa);
+    const int block_size = key_size - 11; //PKCS1_PADDING (exclude padding)
+    const int group = plaintext_len / block_size + 1;
+    unsigned char outbuff[key_size * group]; //include padding
+
+    int round;
+    //Group Encrypt(except last group)
+    for (round = 0; round < group - 1; round++) {
+        RSA_public_encrypt(block_size, &plaintext[round * block_size], &outbuff[round * key_size], rsa, RSA_PKCS1_PADDING);
+    }
+
+    RSA_public_encrypt(plaintext_len % block_size, &plaintext[round * block_size], 
+        &outbuff[round * key_size], rsa, RSA_PKCS1_PADDING); //Last group encrypt
   
     BIO_free_all(keybio);
     RSA_free(rsa);
 
-    if (ciphertext_len > 0) {
-        return base64_encode(outbuff, ciphertext_len);
-    }
- 
-    return {};
+    return base64_encode(outbuff, key_size * group);
 }
