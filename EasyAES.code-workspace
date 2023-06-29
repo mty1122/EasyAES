@@ -57,7 +57,15 @@
 			"chrono": "cpp",
 			"ctime": "cpp",
 			"ratio": "cpp",
-			"thread": "cpp"
+			"thread": "cpp",
+			"charconv": "cpp",
+			"iomanip": "cpp",
+			"variant": "cpp",
+			"compare": "cpp",
+			"concepts": "cpp",
+			"format": "cpp",
+			"numbers": "cpp",
+			"span": "cpp"
 		}
 	}
 }

@@ -50,9 +50,11 @@ std::unique_ptr<char[]> eaes::base64_encode(const unsigned char* in, int inlen) 
     else
         outlen = (inlen / 3 + 1) * 4;
 
+    unsigned char outbuff[outlen];
     std::unique_ptr<char[]> out(new char[outlen + 1]);
     out[outlen]='\0';
 
-    EVP_EncodeBlock((unsigned char*)out.get(), in, inlen);
+    EVP_EncodeBlock(outbuff, in, inlen);
+    memcpy(out.get(), outbuff, outlen);
     return out;
 }
